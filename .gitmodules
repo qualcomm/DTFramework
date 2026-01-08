@@ -1,4 +1,0 @@
-[submodule "fdt"]
-	path = fdt
-	url = https://github.com/dgibson/dtc.git
-	branch = main

@@ -8,32 +8,34 @@ This project provides enhanced DTB manipulation capabilities and device tree sel
 
 ```
 DTFwk/
-├── DTBExtnLib/                    # Extended DTB library
-│   ├── inc/                       # Public header files
+├── libs/                          # Library implementations
+│   ├── DTBExtnLib/                # Extended DTB library
 │   │   ├── create-dtb-apis.h      # DTB creation API header
 │   │   ├── DTBExtnLib_env.h       # Environment configuration header
-│   │   └── DTBInternals.h         # Internal definitions header
-│   └── src/                       # Source files
-│       ├── DTBExtnLib_blob.c      # Blob management functions
-│       ├── DTBExtnLib_create-dtb.c # DTB creation functions
-│       ├── DTBExtnLib_driver.c    # Driver-related functions
-│       ├── DTBExtnLib_node.c      # Node operation functions
-│       ├── DTBExtnLib_overlay.c   # Overlay merge functions
-│       └── DTBExtnLib_prop.c      # Property operation functions
-├── DTSelectLib/                   # DT Selection library
-│   ├── inc/                       # Internal header files
-│   │   ├── dt_select_env.h        # Environment configuration
-│   │   ├── dt_select_internal.h   # Internal definitions
-│   │   └── README.txt             # Library documentation
-│   └── src/                       # Source files
+│   │   ├── DTBInternals.h         # Internal definitions header
+│   │   ├── DTBExtnLib_blob.c      # Blob management functions
+│   │   ├── DTBExtnLib_create-dtb.c # DTB creation functions
+│   │   ├── DTBExtnLib_driver.c    # Driver-related functions
+│   │   ├── DTBExtnLib_node.c      # Node operation functions
+│   │   ├── DTBExtnLib_overlay.c   # Overlay merge functions
+│   │   └── DTBExtnLib_prop.c      # Property operation functions
+│   └── DTSelectLib/               # DT Selection library
+│       ├── dt_select_internal.h   # Internal definitions
 │       ├── dt_select.c            # DT selection algorithm
-│       ├── dt_select_env.c        # Environment wrapper functions
-│       └── get_dt.c               # Wrapper APIs for DT selection
+│       ├── get_dt.c               # Wrapper APIs for DT selection
+│       └── Environment/           # Environment-specific implementations
+│           ├── dt_select_env.h    # Environment configuration
+│           ├── dt_select_env.c    # Environment wrapper functions
+│           └── README.txt         # Library documentation
 ├── inc/                           # Public API headers
 │   ├── DTBExtnLib.h               # DTB extension library API
 │   ├── dt_select.h                # DT selection library API
 │   └── get_dt.h                   # DT selection wrapper API
-├── tool/                          # Utility tools
+├── settings/                      # Device tree source files
+│   ├── *.dts                      # Device tree source files
+│   ├── *.dtsi                     # Device tree source include files
+│   └── *.yaml                     # YAML configuration files
+├── tools/                         # Utility tools
 │   └── parse_dtb_log_script.py    # DTB log parsing script
 ├── CODE-OF-CONDUCT.md             # Code of Conduct
 ├── CONTRIBUTING.md                # Contribution guidelines
@@ -158,7 +160,7 @@ This library supports the following target platforms and architectures:
 #include "create-dtb-apis.h"     // For DTB creation APIs
 ```
 
-Add `DTBExtnLib/inc/` directory to your compiler's include path and compile all `.c` files in `DTBExtnLib/src/` as part of your build.
+Add `libs/DTBExtnLib/` directory to your compiler's include path and compile all `.c` files in `libs/DTBExtnLib/` as part of your build.
 
 ### For DTSelectLib
 
@@ -167,7 +169,7 @@ Add `DTBExtnLib/inc/` directory to your compiler's include path and compile all 
 #include "get_dt.h"              // For high-level wrapper APIs
 ```
 
-Add `inc/` directory to your compiler's include path and compile all `.c` files in `DTSelectLib/src/` as part of your build.
+Add `inc/` and `libs/DTSelectLib/` directories to your compiler's include path and compile all `.c` files in `libs/DTSelectLib/` (including `Environment/` subdirectory) as part of your build.
 
 ## Usage Examples
 
@@ -452,7 +454,17 @@ The library uses standard FDT error codes and extends them with the following Qu
 - `GET_DT_ERR_SIZE_OVERFLOW` (5) - Size overflow
 - `GET_DT_ERR_INVALID_BASE_DTB_PTR` (6) - Invalid base DTB pointer
 
-## Tools
+## settings Directory
+
+The `settings/` directory is designed to store device tree source files and configuration files:
+
+- **DTS Files (*.dts)**: Device tree source files that describe hardware configurations
+- **DTSI Files (*.dtsi)**: Device tree source include files that can be shared across multiple DTS files
+- **YAML Files (*.yaml)**: YAML configuration files for device tree generation or validation
+
+These files can be compiled into DTB (Device Tree Blob) files using the Device Tree Compiler (dtc) and then processed by DTFwk libraries.
+
+## tools Directory
 
 ### parse_dtb_log_script.py
 
