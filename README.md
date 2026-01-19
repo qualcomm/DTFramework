@@ -483,7 +483,7 @@ For reporting security vulnerabilities, please see [SECURITY.md](SECURITY.md). Y
 
 ## License
 
-DTFwk is licensed under the [BSD-3-Clause License](https://spdx.org/licenses/BSD-3-Clause.html). See [LICENSE.txt](LICENSE.txt) for the full license text.
+DTFramework is licensed under the [BSD-3-Clause Clear License](https://spdx.org/licenses/BSD-3-Clause-Clear.html). See [LICENSE.txt](LICENSE.txt) for the full license text.
 
 ## Acknowledgments
 

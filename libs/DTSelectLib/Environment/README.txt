@@ -1,6 +1,5 @@
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-All rights reserved.
-Confidential and Proprietary - Qualcomm Technologies, Inc.
+// Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+// SPDX-License-Identifier: BSD-3-Clause Clear
 ----------------------------------------------------------------------------------------------------------------------------------
 
 Please ensure to update dt_select_env.c and dt_select_env.h based on the specific environments where these files will be utilized.
