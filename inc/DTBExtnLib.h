@@ -14,6 +14,14 @@
 
 #include "DTBDefs.h"
 
+#ifndef TARGET_XBL
+#define   uintptr_t  UINTN
+#define   size_t     UINTN
+#define   uint8_t    UINT8
+#define   uint16_t   UINT16
+#define   uint32_t   UINT32
+#define   uint64_t   UINT64
+#endif
 /*=========================================================================
      API Function Prototypes
 ==========================================================================*/

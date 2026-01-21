@@ -9,6 +9,10 @@ char  buffer[BUFFER_SIZE];
 unsigned int  blob_index = 1;
 #endif
 
+#ifdef TARGET_UEFI
+#define strncmp AsciiStrnCmp
+#endif
+
 static int
 _handle_check (
   handle_data *

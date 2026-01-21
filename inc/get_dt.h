@@ -34,6 +34,7 @@
 	@return
     Returns -1 if any operations fails, else return 0 on success
 */
+#ifdef TARGET_XBL
 int get_dt( uintptr_t     dtbs_image_start_address,
             size_t        dtbs_image_size,
             chip_plat_info_property *chip_plat_info_prop,
@@ -42,6 +43,15 @@ int get_dt( uintptr_t     dtbs_image_start_address,
             uintptr_t     *dtb_addr,
             size_t        *dtb_size,
             int           pre_or_post );
+#else
+int get_dt( uintptr_t     dtbs_image_start_address,
+            size_t        dtbs_image_size,
+            chip_plat_info_property *chip_plat_info_prop,
+            property_list *prop_list,
+            unsigned int  prop_num_entries,
+            uintptr_t     *dtb_addr,
+            size_t        *dtb_size);
+#endif
 
 
 /**

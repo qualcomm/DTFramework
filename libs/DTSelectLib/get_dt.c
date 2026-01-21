@@ -8,8 +8,10 @@
 #include "dt_select.h"
 #include "get_dt.h"
 
+#ifdef TARGET_XBL
 #define PRE  0
 #define POST 1
+#endif
 
 /**
     Function internally calls dt_select_open and dt_select_read to get Base DTB and apply necessary SOC and Plat overlays.
@@ -31,6 +33,7 @@
         @return
     Returns -1 if any operations fails, else return 0 on success
 */
+#ifdef TARGET_XBL
 int
 get_dt (
   uintptr_t                dtbs_image_start_address,
@@ -240,6 +243,198 @@ exit:
   dt_select_handle = (uintptr_t)NULL;
   return return_status;
 }
+#else 
+int
+get_dt (
+  uintptr_t                dtbs_image_start_address,
+  size_t                   dtbs_image_size,
+  chip_plat_info_property  *chip_plat_info_prop,
+  property_list            *prop_list,
+  unsigned int             prop_num_entries,
+  uintptr_t                *dtb_addr,
+  size_t                   *dtb_size
+  )
+{
+  int        return_status    = GET_DT_ERR_NONE;
+  uintptr_t  dt_select_handle = 0;
+  uintptr_t  base_dtb_ptr     = 0x0;
+  uintptr_t  soc_dtbo_ptr     = 0x0;
+  uintptr_t  plat_dtbo_ptr    = 0x0;
+  size_t     base_dtb_size    = 0;
+  size_t     soc_dtbo_size    = 0;
+  size_t     plat_dtbo_size   = 0;
+  size_t     total_blob_size  = 0;
+
+  if (!dtbs_image_start_address || !chip_plat_info_prop || !dtb_addr || !dtb_size || (!prop_list && prop_num_entries)) {
+    /* return error */
+    return_status = GET_DT_ERR_INVALID_PARAMETER;
+    goto exit;
+  }
+
+  base_dtb_ptr     = 0;
+  dt_select_handle = 0;
+  total_blob_size  = 0;
+  fdt_node_handle  node;
+
+  node.blob     = 0x0;
+  node.offset   = 0x0;
+  return_status = dt_select_open (
+                    &dt_select_handle,
+                    dtbs_image_start_address,
+                    dtbs_image_size,
+                    chip_plat_info_prop,
+                    prop_list,
+                    prop_num_entries,
+                    &base_dtb_size,
+                    &soc_dtbo_size,
+                    &plat_dtbo_size
+                    );
+  if (return_status) {
+    goto exit;
+  }
+
+  if (!dt_select_handle) {
+    /* return error */
+    return_status = GET_DT_ERR_HANDLE_RETURN_ERROR;
+    goto exit;
+  }
+
+  if (!base_dtb_size) {
+    /* return error */
+    return_status = GET_DT_ERR_INVALID_BASE_DTB_SIZE;
+    goto exit;
+  }
+
+  total_blob_size = base_dtb_size + soc_dtbo_size;
+  if ((total_blob_size < soc_dtbo_size) || ((total_blob_size + plat_dtbo_size) < plat_dtbo_size)) {
+    return_status = GET_DT_ERR_SIZE_OVERFLOW;
+    goto exit;
+  }
+
+  total_blob_size += plat_dtbo_size;
+  /* Allocate enough memory to apply all overlay(s) to Base DT */
+  base_dtb_ptr = (uintptr_t)MALLOC_WRAPPER (total_blob_size);
+  if (!base_dtb_ptr) {
+    /* return error */
+    return_status = GET_DT_ERR_MALLOC_FAIL;
+    goto exit;
+  }
+
+  /* Read Base DTB */
+  return_status = dt_select_read_blob (
+                    dt_select_handle,
+                    BASE_DTB,
+                    &base_dtb_ptr,
+                    base_dtb_size
+                    );
+  if (return_status) {
+    /* return error */
+    goto exit;
+  }
+
+  if (soc_dtbo_size) {
+    /* Handle Chipset/SOC Overlay */
+    /* Allocate memory to store SOC dtbo */
+    soc_dtbo_ptr = (uintptr_t)MALLOC_WRAPPER (soc_dtbo_size);
+    if (!soc_dtbo_ptr) {
+      /* return error */
+      return_status = GET_DT_ERR_MALLOC_FAIL;
+      goto exit;
+    }
+
+    /* Read Base DTB */
+    return_status = dt_select_read_blob (
+                      dt_select_handle,
+                      SOC_DTBO,
+                      &soc_dtbo_ptr,
+                      soc_dtbo_size
+                      );
+    if (return_status) {
+      /* return error */
+      goto exit;
+    }
+
+    /* Apply SOC DTB Overlay */
+    return_status = fdt_merge_overlay ((const void *)base_dtb_ptr, base_dtb_size, (void *)soc_dtbo_ptr, soc_dtbo_size, (void *)base_dtb_ptr, base_dtb_size + soc_dtbo_size);
+    if (return_status) {
+      /* return error */
+      goto exit;
+    }
+
+    /* Need to update size for base DTB before we apply Platform overlay (if applied) */
+    node.blob     = (const void *)base_dtb_ptr;
+    return_status = fdt_get_blob_size (&node, (uint32_t *)&base_dtb_size);
+    if (return_status) {
+      goto exit;
+    }
+
+    FREE_WRAPPER ((void *)soc_dtbo_ptr, soc_dtbo_size);
+    soc_dtbo_ptr = (uintptr_t)NULL;
+  }
+
+  if (plat_dtbo_size) {
+    /* Handle Platform Overlay */
+    /* Allocate memory to store Platform dtbo */
+    plat_dtbo_ptr = (uintptr_t)MALLOC_WRAPPER (plat_dtbo_size);
+    if (!plat_dtbo_ptr) {
+      /* return error */
+      return_status = GET_DT_ERR_MALLOC_FAIL;
+      goto exit;
+    }
+
+    /* Read Base DTB */
+    return_status = dt_select_read_blob (
+                      dt_select_handle,
+                      PLATFORM_DTBO,
+                      &plat_dtbo_ptr,
+                      plat_dtbo_size
+                      );
+    if (return_status) {
+      /* return error */
+      goto exit;
+    }
+
+    /* Apply Platform DTB Overlay */
+    return_status = fdt_merge_overlay ((const void *)base_dtb_ptr, base_dtb_size, (void *)plat_dtbo_ptr, plat_dtbo_size, (void *)base_dtb_ptr, total_blob_size);
+    if (return_status) {
+      /* return error */
+      goto exit;
+    }
+
+    FREE_WRAPPER ((void *)plat_dtbo_ptr, plat_dtbo_size);
+    plat_dtbo_ptr = (uintptr_t)NULL;
+  }
+
+exit:
+  if (return_status) {
+    /* If error, then free all buffers */
+    if (base_dtb_ptr) {
+      FREE_WRAPPER ((void *)base_dtb_ptr, total_blob_size);
+    }
+
+    if (soc_dtbo_ptr) {
+      FREE_WRAPPER ((void *)soc_dtbo_ptr, soc_dtbo_size);
+    }
+
+    if (plat_dtbo_ptr) {
+      FREE_WRAPPER ((void *)plat_dtbo_ptr, plat_dtbo_size);
+    }
+
+    base_dtb_ptr  = (uintptr_t)NULL;
+    soc_dtbo_ptr  = (uintptr_t)NULL;
+    plat_dtbo_ptr = (uintptr_t)NULL;
+  } else {
+    /* Return pointer & size of Base DT on success */
+    *dtb_addr = base_dtb_ptr;
+    *dtb_size = total_blob_size;
+  }
+
+  /* Close dt_select handle before exiting */
+  dt_select_close (dt_select_handle);
+  dt_select_handle = (uintptr_t)NULL;
+  return return_status;
+}
+#endif
 
 void
 get_dt_free (
