@@ -1912,7 +1912,11 @@ Recursive_find_subnode (
       // Gets isolated subnode name
       subname = fdt_get_name (blob, sub_node_offset, &len);
       // Adds current node name to subnode and stores in dbuf for navigation
+ #if defined (TARGET_UEFI)
+      if (AsciiStrCmp (name, "/") != 0) {
+ #elif defined (TARGET_XBL) || defined (PORT_Q6)
       if (strcmp (name, "/") != 0) {
+ #endif
         // If current node is not root node, add "/" between current node name and subnode name
  #if defined (TARGET_UEFI)
         AsciiSPrint (fullname, 256, "%a/%a", name, subname);
@@ -1970,7 +1974,11 @@ print_all_dtb_nodes (
   int  sub_node_offset;
   int  len;
 
-  if (strcmp (name, "/") == 0) {
+  #if defined (TARGET_UEFI)
+      if (AsciiStrCmp (name, "/") != 0) {
+ #elif defined (TARGET_XBL) || defined (PORT_Q6)
+      if (strcmp (name, "/") != 0) {
+ #endif
  #if defined (TARGET_UEFI)
     dtb_log ("found dtb node:[%a]\n", name);
  #elif defined (TARGET_XBL) || defined (PORT_Q6)
@@ -1983,7 +1991,11 @@ print_all_dtb_nodes (
 
     subname = fdt_get_name (blob, sub_node_offset, &len);
     // Adds current node name to subnode and stores in dbuf for navigation
-    if (strcmp (name, "/") != 0) {
+ #if defined (TARGET_UEFI)
+      if (AsciiStrCmp (name, "/") != 0) {
+ #elif defined (TARGET_XBL) || defined (PORT_Q6)
+      if (strcmp (name, "/") != 0) {
+ #endif
       // If current node is not root node, add "/" between current node name and subnode name
  #if defined (TARGET_UEFI)
       AsciiSPrint (fullname, 256, "%a/%a", name, subname);
