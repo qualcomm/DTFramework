@@ -15,10 +15,12 @@
 #include "DTBDefs.h"
 
 #if defined (TARGET_UEFI)
-  #include <Library/PrintLib.h>
-  #include <Library/QcomBaseLib.h>
-  #include <Library/MemoryAllocationLib.h>
+  #include <Uefi.h>
   #include <Library/DebugLib.h>
+  #include <Library/PrintLib.h>
+  #include <Library/PerformanceLib.h>
+  #include <Library/TimerLib.h>
+  #include <Library/MemoryAllocationLib.h>
 #elif defined (TARGET_XBL)
   #include <stdint.h>
   #include <stdio.h>
@@ -138,7 +140,50 @@ __dtb_get_time_us (
   )
 {
  #if defined (TARGET_UEFI)
-  return GetTimerCountus ();
+  STATIC UINT64   CachedFrequency = 0;
+  STATIC UINT32   FactoruS = 0;
+  STATIC BOOLEAN  Initialized = FALSE;
+  UINT64          TimeTicks = 0;
+  UINT64          StartVal = 0;
+  UINT64          EndVal = 0;
+  
+  // Initialize on first call (matches QcomBaseLib approach)
+  if (!Initialized) {
+    CachedFrequency = GetPerformanceCounterProperties (&StartVal, &EndVal);
+    
+    // Validate frequency is reasonable (>1MHz)
+    if (CachedFrequency <= 1000000) {
+      DEBUG ((DEBUG_ERROR, "__dtb_get_time_us: Frequency too low\n"));
+      return 0;
+    }
+    
+    // Validate frequency is not too high (<4GHz)
+    if (CachedFrequency >= 0x100000000ULL) {
+      DEBUG ((DEBUG_ERROR, "__dtb_get_time_us: Frequency too high\n"));
+      return 0;
+    }
+    
+    // Validate counter counts up (not down)
+    if (StartVal >= EndVal) {
+      DEBUG ((DEBUG_ERROR, "__dtb_get_time_us: Down-counter not supported\n"));
+      return 0;
+    }
+    
+    // Pre-calculate conversion factor: Frequency / 1,000,000
+    // This avoids overflow in the main calculation
+    FactoruS = (UINT32)DivU64x32 (CachedFrequency, 1000000);
+    
+    Initialized = TRUE;
+  }
+  
+  // Get current performance counter value
+  TimeTicks = GetPerformanceCounter();
+  
+  // Convert to microseconds using cached factor
+  // Formula: TimeUs = TimeTicks / (Frequency / 1,000,000)
+  // This is equivalent to: TimeUs = (TimeTicks * 1,000,000) / Frequency
+  // But avoids integer overflow by doing division first
+  return DivU64x32 (TimeTicks, FactoruS);
  #elif defined (TARGET_XBL)
   return timer_if->get_apss_qtimer_counter_us ();
  #elif defined (PORT_Q6)
