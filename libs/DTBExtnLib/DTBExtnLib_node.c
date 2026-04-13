@@ -785,9 +785,11 @@ fdt_get_node_handle (
   char  ibuffer[DTB_LINE_BUF_SIZE];
  #endif
 
+ #ifdef ENABLE_DTB_PROFILING
   uint64_t  bts, ets;
   __init_timer_mem_api ();
   bts = ets = __dtb_get_time_us ();
+ #endif
 
   PTR_CHECK (node);
   PTR_CHECK (name);
