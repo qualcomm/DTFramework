@@ -16,9 +16,9 @@
 
 #if defined (TARGET_UEFI)
   #include <Library/PrintLib.h>
-  #include <Library/QcomBaseLib.h>
   #include <Library/MemoryAllocationLib.h>
   #include <Library/DebugLib.h>
+  #include <Library/DtFrameworkLibSupport.h>
 #elif defined (TARGET_XBL)
   #include <stdint.h>
   #include <stdio.h>
