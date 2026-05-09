@@ -31,7 +31,7 @@
 
 /*========================================================================*/
 #if defined (TARGET_UEFI)
-#define dtb_log(...)  DEBUG ((EFI_D_WARN, ##__VA_ARGS__))
+#define dtb_log(...)  DEBUG ((DEBUG_WARN, ##__VA_ARGS__))
 #elif defined (TARGET_XBL)
 #define dtb_log(...) \
 {\

@@ -230,7 +230,7 @@ __dtb_malloc (
 
   if (FreeBufferPtr == NULL) {
     if ((FreeBufferPtr = AllocateZeroPoolNoFree (EFI_PAGE_SIZE)) == NULL) {
-      DEBUG ((EFI_D_WARN, "MemoryAlloc failed\n"));
+      DEBUG ((DEBUG_WARN, "MemoryAlloc failed\n"));
       *ppMem = NULL;
     }
 
@@ -241,7 +241,7 @@ __dtb_malloc (
   dwSize = (dwSize + MEMORY_ALLOC_ALIGN_MASK) & (~MEMORY_ALLOC_ALIGN_MASK);
   if (FreeBufferPtr + dwSize > EndPtr) {
     if ((FreeBufferPtr = AllocateZeroPoolNoFree (EFI_PAGE_SIZE)) == NULL) {
-      DEBUG ((EFI_D_WARN, "MemoryAlloc failed\n"));
+      DEBUG ((DEBUG_WARN, "MemoryAlloc failed\n"));
       ASSERT (FreeBufferPtr != NULL);
       *ppMem = NULL;
     }
