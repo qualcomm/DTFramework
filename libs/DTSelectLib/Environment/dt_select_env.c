@@ -65,7 +65,7 @@ LOG_MESSAGE_WRAPPER (
   )
 {
   #if 0
-  DEBUG ((EFI_D_WARN, buffer_ptr));
+  DEBUG ((DEBUG_WARN, buffer_ptr));
   #else
   boot_log_message(buffer_ptr);
   #endif
@@ -154,7 +154,7 @@ LOG_MESSAGE_WRAPPER (
   char  *buffer_ptr
   )
 {
-  DEBUG ((EFI_D_WARN, buffer_ptr));
+  DEBUG ((DEBUG_WARN, buffer_ptr));
 }
 
 size_t

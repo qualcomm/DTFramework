@@ -6,7 +6,7 @@
 #define DT_SELECT_CUSTOM_ENV_H_
 #ifdef TARGET_UEFI
 #include <Library/BaseLib.h>
-#include <Library/PrintShLib.h>
+#include <Library/PrintLib.h>
 #else
 /* Use below header file for using standard datatype */
 #include <stdint.h>

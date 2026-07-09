@@ -16,9 +16,9 @@
 
 #if defined (TARGET_UEFI)
   #include <Library/PrintLib.h>
-  #include <Library/QcomBaseLib.h>
   #include <Library/MemoryAllocationLib.h>
   #include <Library/DebugLib.h>
+  #include <Library/DtFrameworkLibSupport.h>
 #elif defined (TARGET_XBL)
   #include <stdint.h>
   #include <stdio.h>
@@ -230,7 +230,7 @@ __dtb_malloc (
 
   if (FreeBufferPtr == NULL) {
     if ((FreeBufferPtr = AllocateZeroPoolNoFree (EFI_PAGE_SIZE)) == NULL) {
-      DEBUG ((EFI_D_WARN, "MemoryAlloc failed\n"));
+      DEBUG ((DEBUG_WARN, "MemoryAlloc failed\n"));
       *ppMem = NULL;
     }
 
@@ -241,7 +241,7 @@ __dtb_malloc (
   dwSize = (dwSize + MEMORY_ALLOC_ALIGN_MASK) & (~MEMORY_ALLOC_ALIGN_MASK);
   if (FreeBufferPtr + dwSize > EndPtr) {
     if ((FreeBufferPtr = AllocateZeroPoolNoFree (EFI_PAGE_SIZE)) == NULL) {
-      DEBUG ((EFI_D_WARN, "MemoryAlloc failed\n"));
+      DEBUG ((DEBUG_WARN, "MemoryAlloc failed\n"));
       ASSERT (FreeBufferPtr != NULL);
       *ppMem = NULL;
     }
@@ -785,9 +785,11 @@ fdt_get_node_handle (
   char  ibuffer[DTB_LINE_BUF_SIZE];
  #endif
 
+ #ifdef ENABLE_DTB_PROFILING
   uint64_t  bts, ets;
   __init_timer_mem_api ();
   bts = ets = __dtb_get_time_us ();
+ #endif
 
   PTR_CHECK (node);
   PTR_CHECK (name);
