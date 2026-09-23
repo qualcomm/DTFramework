@@ -1,0 +1,3 @@
+[submodule "libs/libfdt"]
+	path = libs/libfdt
+	url = https://github.com/devicetree-org/pylibfdt.git
