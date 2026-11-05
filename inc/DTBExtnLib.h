@@ -532,4 +532,44 @@ int fdt_get_name_index(fdt_node_handle *node, const char *pname, char *tname, in
  */
 int CreatDtbHashTable (int blob_id, const void  *blob);
 
+/*
+ * DTB hash-context transfer across firmware phase boundaries.
+ *
+ * Only the root pointers (static variables inside node.c and blob.c) need to
+ * cross a phase boundary; the linked-list nodes themselves stay in place.
+ *
+ * DTB_HASH_CTX_LEVELS and DTB_HASH_CTX_MAX_BLOB must match the compile-time
+ * constants in DTBExtnLib_node.c (hash_table_level) and DTBDefs.h (MAX_BLOB_ID).
+ */
+#define DTB_HASH_CTX_LEVELS    10
+#define DTB_HASH_CTX_MAX_BLOB  5
+
+typedef struct {
+  void        *hash_table[DTB_HASH_CTX_LEVELS]; /* blob_list_node * per level */
+  void        *phandle_cache_root;               /* phandle_to_node_cache *   */
+  const void  *dtb_blob[DTB_HASH_CTX_MAX_BLOB]; /* dtb_blob[] from blob.c    */
+} dtb_hash_ctx;
+
+/* Call after CreatDtbHashTable to snapshot static roots into ctx. */
+void dtb_export_hash_context (dtb_hash_ctx *ctx);
+
+/* Call before first fdt_get_node_handle to restore static roots. */
+void dtb_import_hash_context (const dtb_hash_ctx *ctx);
+
+/* Call after fdt_set_blob_handle to snapshot dtb_blob[] into ctx->dtb_blob[]. */
+void dtb_export_blob_context (dtb_hash_ctx *ctx);
+
+/* Call before first fdt_init_root_handle_for_driver_by_id to restore dtb_blob[]. */
+void dtb_import_blob_context (const dtb_hash_ctx *ctx);
+
+/*
+ * fdt_adjust_hash_offsets - incremental hash-table fixup after a property splice
+ *
+ * Call after fdt_setprop() / fdt_add_property() when the property value size
+ * changed.  @splice_offset is (int)((char *)prop->data - (char *)blob) obtained
+ * before the modification; @delta is FDT_TAGALIGN(new_len) - FDT_TAGALIGN(old_len).
+ * For node add/delete use fdt_set_blob_handle() (full rebuild) instead.
+ */
+int fdt_adjust_hash_offsets (const void *blob, int splice_offset, int delta);
+
 #endif  /* DTBEXTNLIB_H_ */

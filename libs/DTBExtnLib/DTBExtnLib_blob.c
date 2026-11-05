@@ -14,6 +14,15 @@
 #include "DTBInternals.h"
 #include "DTBExtnLib_env.h"
 
+/* PORT_ARMv8 is defined in DTBExtnLib.inf (DXE build).  PUTS is a no-op in
+   non-INSTRUMENTATION builds, so use EDK2 DEBUG directly for blob logging. */
+#if defined (PORT_ARMv8) && !defined (INSTRUMENTATION)
+  #include <Library/DebugLib.h>
+  #define DTB_BLOB_LOG(fmt, ...)  DEBUG ((DEBUG_ERROR, fmt, ##__VA_ARGS__))
+#else
+  #define DTB_BLOB_LOG(fmt, ...)
+#endif
+
 /*=========================================================================
      Default Defines
 ==========================================================================*/
@@ -314,4 +323,84 @@ fdt_init_root_handle_for_driver_by_id (
   }
 
   return fdt_init_root_handle_for_driver (node, dtb_blob[blob_id]);
+}
+
+/**
+ * dtb_export_blob_context - snapshot dtb_blob[] into ctx->dtb_blob[]
+ * @ctx: caller-allocated context struct (dtb_blob[] field written here)
+ *
+ * Complements dtb_export_hash_context() in DTBExtnLib_node.c.
+ * Call both together before building the HOB.
+ */
+void
+dtb_export_blob_context (
+  dtb_hash_ctx  *ctx
+  )
+{
+  int  i;
+
+  if (ctx == NULL) {
+    return;
+  }
+
+  if (dtb_blob[DEFAULT_BLOB_ID] == NULL) {
+    /* fdt_set_blob_handle() was not called before export.  The HOB will
+       carry a NULL DTB pointer and DXE will fail to locate the blob.
+       Callers must invoke fdt_set_blob_handle() first. */
+    DTB_BLOB_LOG ("dtb_export_blob_context: ERROR fdt_set_blob_handle not called\n");
+    PUTS ("dtb_export_blob_context: ERROR fdt_set_blob_handle not called\n");
+    return;
+  }
+
+  for (i = 0; i < MAX_BLOB_ID; i++) {
+    ctx->dtb_blob[i] = dtb_blob[i];
+  }
+
+ #ifdef INSTRUMENTATION
+  {
+    char  ibuffer[DTB_LINE_BUF_SIZE];
+    SNPRINTF (ibuffer, DTB_LINE_BUF_SIZE,
+              "dtb_export_blob_context: blob[0]=%p blob[1]=%p blob[2]=%p blob[3]=%p blob[4]=%p",
+              ctx->dtb_blob[0], ctx->dtb_blob[1], ctx->dtb_blob[2],
+              ctx->dtb_blob[3], ctx->dtb_blob[4]);
+    PUTS (ibuffer);
+  }
+ #else
+  DTB_BLOB_LOG ("dtb_export_blob_context: blob[0]=%p exported to HOB\n", ctx->dtb_blob[0]);
+ #endif
+}
+
+/**
+ * dtb_import_blob_context - restore dtb_blob[] from ctx->dtb_blob[]
+ * @ctx: context previously filled by dtb_export_blob_context()
+ *
+ * Complements dtb_import_hash_context() in DTBExtnLib_node.c.
+ * Call both together after reading the HOB.
+ */
+void
+dtb_import_blob_context (
+  const dtb_hash_ctx  *ctx
+  )
+{
+  int  i;
+
+  if (ctx == NULL) {
+    return;
+  }
+
+  for (i = 0; i < MAX_BLOB_ID; i++) {
+    dtb_blob[i] = ctx->dtb_blob[i];
+  }
+
+ #ifdef INSTRUMENTATION
+  {
+    char  ibuffer[DTB_LINE_BUF_SIZE];
+    SNPRINTF (ibuffer, DTB_LINE_BUF_SIZE,
+              "dtb_import_blob_context: dtb_blob[0]=%p restored from HOB ctx",
+              dtb_blob[DEFAULT_BLOB_ID]);
+    PUTS (ibuffer);
+  }
+ #else
+  DTB_BLOB_LOG ("dtb_import_blob_context: dtb_blob[0]=%p restored from HOB\n", dtb_blob[DEFAULT_BLOB_ID]);
+ #endif
 }

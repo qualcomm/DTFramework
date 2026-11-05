@@ -2084,3 +2084,175 @@ CreatDtbHashTable (
   return FDT_ERR_QC_NOERROR;
  #endif
 }
+
+/**
+ * dtb_export_hash_context - snapshot static root pointers into ctx
+ * @ctx: caller-allocated context struct (written by this function)
+ *
+ * Copies phead_hash_node_table[] and phandle_cache_root into ctx so they can
+ * be carried across a firmware-phase boundary (e.g. via HOB).  The linked-list
+ * nodes themselves are NOT copied; they remain valid in PrePi-heap memory.
+ * dtb_blob[] is handled by dtb_export_blob_context() in DTBExtnLib_blob.c.
+ */
+void
+dtb_export_hash_context (
+  dtb_hash_ctx  *ctx
+  )
+{
+  int  i;
+
+  if (ctx == NULL) {
+    return;
+  }
+
+ #ifdef ENABLE_HASH_FOR_DTB
+  for (i = 0; i < hash_table_level; i++) {
+    ctx->hash_table[i] = phead_hash_node_table[i];
+  }
+
+  ctx->phandle_cache_root = phandle_cache_root;
+ #else
+  for (i = 0; i < DTB_HASH_CTX_LEVELS; i++) {
+    ctx->hash_table[i] = NULL;
+  }
+
+  ctx->phandle_cache_root = NULL;
+ #endif
+}
+
+/**
+ * dtb_import_hash_context - restore static root pointers from ctx
+ * @ctx: context previously filled by dtb_export_hash_context()
+ *
+ * Writes phead_hash_node_table[] and phandle_cache_root from ctx so that
+ * subsequent fdt_get_node_handle() calls hit the pre-built hash table instead
+ * of falling through to a linear search.  Call once, before the first
+ * fdt_get_node_handle() in the new firmware phase.
+ */
+void
+dtb_import_hash_context (
+  const dtb_hash_ctx  *ctx
+  )
+{
+  int  i;
+
+  if (ctx == NULL) {
+    return;
+  }
+
+ #ifdef ENABLE_HASH_FOR_DTB
+  for (i = 0; i < hash_table_level; i++) {
+    phead_hash_node_table[i] = ctx->hash_table[i];
+  }
+
+  phandle_cache_root = ctx->phandle_cache_root;
+ #else
+  (void)ctx;
+ #endif
+}
+
+#ifdef ENABLE_HASH_FOR_DTB
+/**
+ * adjust_hash_node_offsets - shift hash_node offsets after a structure-block splice
+ *
+ * For every hash_node belonging to @blob whose offset is strictly greater than
+ * @splice_offset, adds @delta.  Property changes never move preceding nodes,
+ * so only the tail of the structure block needs correction.
+ */
+static void
+adjust_hash_node_offsets (
+  const void  *blob,
+  int         splice_offset,
+  int         delta
+  )
+{
+  int             level;
+  blob_list_node  *blob_node;
+  hash_node       *hn;
+
+  for (level = 0; level < hash_table_level; level++) {
+    for (blob_node = phead_hash_node_table[level];
+         blob_node != NULL;
+         blob_node = blob_node->next)
+    {
+      if (blob_node->blob != blob) {
+        continue;
+      }
+
+      for (hn = blob_node->hash_node; hn != NULL; hn = hn->next) {
+        if (hn->node.offset > splice_offset) {
+          hn->node.offset += delta;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * adjust_phandle_cache_offsets - shift phandle-cache entries after a splice
+ *
+ * The phandle cache stores node offsets indexed by phandle value.  Any entry
+ * for @blob that falls strictly after @splice_offset is shifted by @delta.
+ */
+static void
+adjust_phandle_cache_offsets (
+  const void  *blob,
+  int         splice_offset,
+  int         delta
+  )
+{
+  phandle_to_node_cache  *cache = phandle_cache_root;
+  uint32_t                i;
+
+  while (cache != NULL) {
+    if (cache->blob == blob) {
+      for (i = 0; i < cache->size; i++) {
+        if ((cache->array[i] != 0) &&
+            ((int)cache->array[i] > splice_offset))
+        {
+          cache->array[i] = (uint32_t)((int)cache->array[i] + delta);
+        }
+      }
+
+      break;
+    }
+
+    cache = cache->next;
+  }
+}
+#endif  /* ENABLE_HASH_FOR_DTB */
+
+/**
+ * fdt_adjust_hash_offsets - incremental hash-table fixup after a property splice
+ * @blob:          blob that was modified via fdt_setprop() or fdt_add_property()
+ * @splice_offset: byte offset into the structure block where the splice began;
+ *                 compute as (int)((char *)prop->data - (char *)blob) BEFORE
+ *                 calling the modifying libfdt function
+ * @delta:         FDT_TAGALIGN(new_len) - FDT_TAGALIGN(old_len); negative for
+ *                 value shrink, positive for value grow
+ *
+ * Cheaper than fdt_set_blob_handle() (full rebuild) when a single property
+ * value changes size.  Only adjusts existing node offsets — does NOT add or
+ * remove hash_node entries.  For fdt_add_subnode() / fdt_del_node(), call
+ * fdt_set_blob_handle() to trigger a full rebuild instead.
+ *
+ * returns: FDT_ERR_QC_NOERROR (always; kept for API symmetry)
+ */
+int
+fdt_adjust_hash_offsets (
+  const void  *blob,
+  int         splice_offset,
+  int         delta
+  )
+{
+  if ((blob == NULL) || (delta == 0)) {
+    return FDT_ERR_QC_NOERROR;
+  }
+
+ #ifdef ENABLE_HASH_FOR_DTB
+  adjust_hash_node_offsets (blob, splice_offset, delta);
+  adjust_phandle_cache_offsets (blob, splice_offset, delta);
+ #endif
+
+  return FDT_ERR_QC_NOERROR;
+}
